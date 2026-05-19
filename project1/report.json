@@ -1,0 +1,17 @@
+{
+  "total_students": 15,
+  "country_distribution": {
+    "Australia": 5,
+    "Singapore": 4,
+    "China": 3,
+    "Malaysia": 2,
+    "UK": 1
+  },
+  "bet_status_distribution": {
+    "active": 4,
+    "completed": 9,
+    "failed": 2
+  },
+  "overall_completion_rate_percent": 60.0,
+  "settled_completion_rate_percent": 81.82
+}
