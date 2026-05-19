@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>配置文件编辑器</title>
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --text-1: #1d1d1f;
+    --text-2: #6e6e73;
+    --text-3: #86868b;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    --accent-active: #006edb;
+    --success: #34c759;
+    --danger: #c5221f;
+    --border: rgba(0, 0, 0, 0.06);
+    --hairline: rgba(0, 0, 0, 0.08);
+    --segment-bg: rgba(120, 120, 128, 0.12);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 17px;
+    letter-spacing: -0.022em;
+    line-height: 1.47;
+    min-height: 100vh;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+
+  /* Hero */
+  .hero { text-align: center; margin-bottom: 40px; }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    margin-bottom: 12px;
+  }
+  .hero .subtitle { font-size: 19px; color: var(--text-2); letter-spacing: -0.01em; }
+  .hero code {
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+
+  /* Settings group(模仿 iOS 设置面板) */
+  .group {
+    background: var(--surface);
+    border-radius: 14px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    animation: fadeUp 0.5s ease backwards;
+  }
+  .group:nth-of-type(2) { animation-delay: 0.05s; }
+  .group-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 20px 20px 4px;
+  }
+
+  /* Setting row */
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 0.5px solid var(--hairline);
+    min-height: 56px;
+    gap: 16px;
+  }
+  .row:first-of-type { border-top: none; }
+  .row-label { font-size: 17px; color: var(--text-1); flex-shrink: 0; }
+  .row-control { display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end; }
+
+  /* iOS-style toggle */
+  .toggle { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: #e5e5ea;
+    border-radius: 999px;
+    transition: background 0.25s ease;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 27px; height: 27px;
+    left: 2px; top: 2px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--success); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+  /* Segmented control */
+  .segmented {
+    display: inline-flex;
+    background: var(--segment-bg);
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .segmented button {
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-1);
+    letter-spacing: -0.012em;
+    transition: background 0.18s ease;
+  }
+  .segmented button.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  .segmented button:hover:not(.active) { background: rgba(255, 255, 255, 0.4); }
+
+  /* Slider */
+  .slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: #d1d1d6;
+    border-radius: 2px;
+    outline: none;
+    max-width: 220px;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px; height: 28px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease;
+  }
+  .slider::-webkit-slider-thumb:active { transform: scale(1.1); }
+  .slider::-moz-range-thumb {
+    width: 28px; height: 28px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+  .slider-value {
+    font-size: 17px;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* JSON preview(暗色代码块) */
+  .preview {
+    background: #1d1d1f;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    animation: fadeUp 0.5s 0.1s ease backwards;
+  }
+  .preview-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .preview pre {
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #f5f5f7;
+    margin: 0;
+  }
+  .preview .k { color: #ff9f0a; }
+  .preview .s { color: #ffd60a; }
+  .preview .n { color: #66d4cf; }
+  .preview .b { color: #ff66c4; }
+
+  /* Buttons */
+  .actions {
+    display: flex; gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.5s 0.15s ease backwards;
+  }
+  .btn {
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    border-radius: 980px;
+    padding: 11px 22px;
+    cursor: pointer;
+    letter-spacing: -0.014em;
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:active { background: var(--accent-active); transform: scale(0.98); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(0, 113, 227, 0.35);
+  }
+  .btn-secondary:hover { background: rgba(0, 113, 227, 0.04); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(140%);
+    background: rgba(29, 29, 31, 0.92);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.012em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.danger { background: rgba(197, 34, 31, 0.92); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 56px;
+    font-size: 13px;
+    color: var(--text-3);
+    letter-spacing: -0.012em;
+  }
+  .footer code {
+    font-family: "SF Mono", monospace;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  #file-input { display: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 80px; }
+    .row { padding: 12px 16px; }
+    .segmented button { padding: 5px 10px; font-size: 12px; }
+    .slider { max-width: 140px; }
+    .btn { padding: 10px 18px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="hero">
+    <h1>配置文件编辑器</h1>
+    <p class="subtitle">所见即所得地修改 <code>config.json</code></p>
+  </header>
+
+  <!-- 外观分组 -->
+  <div class="group">
+    <div class="group-title">外观</div>
+    <div class="row">
+      <span class="row-label">主题</span>
+      <div class="row-control">
+        <div class="segmented" id="theme-segment">
+          <button data-value="light">浅色</button>
+          <button data-value="dark">深色</button>
+          <button data-value="auto">自动</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="row-label">语言</span>
+      <div class="row-control">
+        <div class="segmented" id="language-segment">
+          <button data-value="zh-CN">中文</button>
+          <button data-value="en-US">English</button>
+          <button data-value="ja-JP">日本語</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="row-label">字体大小</span>
+      <div class="row-control">
+        <input type="range" class="slider" id="font-slider" min="8" max="32" step="1" value="14">
+        <span class="slider-value" id="font-value">14</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 行为分组 -->
+  <div class="group">
+    <div class="group-title">行为</div>
+    <div class="row">
+      <span class="row-label">自动保存</span>
+      <div class="row-control">
+        <label class="toggle">
+          <input type="checkbox" id="auto-save">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <span class="row-label">通知</span>
+      <div class="row-control">
+        <label class="toggle">
+          <input type="checkbox" id="notifications">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON 实时预览 -->
+  <div class="preview">
+    <div class="preview-title">config.json 实时预览</div>
+    <pre><code id="json-preview"></code></pre>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="actions">
+    <button class="btn btn-primary" id="download-btn">下载 config.json</button>
+    <button class="btn btn-secondary" id="upload-btn">加载已有文件</button>
+    <button class="btn btn-secondary" id="reset-btn">重置默认</button>
+    <input type="file" id="file-input" accept=".json,application/json">
+  </div>
+
+  <footer class="footer">
+    Week 3 · Project 2 · 与 <code>config_editor.py</code> 验证规则一致
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============ 默认配置(与 config_editor.py 完全一致) ============
+  const DEFAULT_CONFIG = {
+    theme: "light",
+    language: "zh-CN",
+    font_size: 14,
+    auto_save: true,
+    notifications: true,
+  };
+  const VALID_THEMES = ["light", "dark", "auto"];
+  const VALID_LANGUAGES = ["zh-CN", "en-US", "ja-JP"];
+  const FONT_MIN = 8, FONT_MAX = 32;
+
+  let config = { ...DEFAULT_CONFIG };
+
+  // ============ 渲染 JSON 预览(带简易语法着色) ============
+  function renderPreview() {
+    const json = JSON.stringify(config, null, 2);
+    const html = json
+      .replace(/(&)/g, "&amp;")
+      .replace(/(".+?")(\s*:)/g, '<span class="k">$1</span>$2')
+      .replace(/:\s*(true|false)/g, ': <span class="b">$1</span>')
+      .replace(/:\s*(\d+)/g, ': <span class="n">$1</span>')
+      .replace(/:\s*(".+?")(,?)/g, ': <span class="s">$1</span>$2');
+    document.getElementById('json-preview').innerHTML = html;
+  }
+
+  // ============ 渲染所有控件回到当前状态 ============
+  function renderControls() {
+    document.querySelectorAll('#theme-segment button').forEach(b => {
+      b.classList.toggle('active', b.dataset.value === config.theme);
+    });
+    document.querySelectorAll('#language-segment button').forEach(b => {
+      b.classList.toggle('active', b.dataset.value === config.language);
+    });
+    document.getElementById('font-slider').value = config.font_size;
+    document.getElementById('font-value').textContent = config.font_size;
+    document.getElementById('auto-save').checked = config.auto_save;
+    document.getElementById('notifications').checked = config.notifications;
+    renderPreview();
+  }
+
+  // ============ 控件事件绑定 ============
+  document.querySelectorAll('#theme-segment button').forEach(b => {
+    b.addEventListener('click', () => { config.theme = b.dataset.value; renderControls(); });
+  });
+  document.querySelectorAll('#language-segment button').forEach(b => {
+    b.addEventListener('click', () => { config.language = b.dataset.value; renderControls(); });
+  });
+  document.getElementById('font-slider').addEventListener('input', (e) => {
+    config.font_size = parseInt(e.target.value);
+    document.getElementById('font-value').textContent = config.font_size;
+    renderPreview();
+  });
+  document.getElementById('auto-save').addEventListener('change', (e) => {
+    config.auto_save = e.target.checked; renderPreview();
+  });
+  document.getElementById('notifications').addEventListener('change', (e) => {
+    config.notifications = e.target.checked; renderPreview();
+  });
+
+  // ============ Toast 提示(底部弹出) ============
+  function toast(message, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = message;
+    t.classList.toggle('danger', type === 'danger');
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  // ============ 下载当前 config 为 JSON 文件 ============
+  document.getElementById('download-btn').addEventListener('click', () => {
+    const json = JSON.stringify(config, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('✓ 已下载 config.json');
+  });
+
+  // ============ 加载已有配置 ============
+  document.getElementById('upload-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const loaded = JSON.parse(ev.target.result);
+        // 验证字段(与 config_editor.py 一致)
+        if (!VALID_THEMES.includes(loaded.theme)) throw new Error('theme 不合法');
+        if (!VALID_LANGUAGES.includes(loaded.language)) throw new Error('language 不合法');
+        if (typeof loaded.font_size !== 'number' || loaded.font_size < FONT_MIN || loaded.font_size > FONT_MAX) {
+          throw new Error(`font_size 必须在 ${FONT_MIN}-${FONT_MAX} 之间`);
+        }
+        if (typeof loaded.auto_save !== 'boolean') throw new Error('auto_save 必须是布尔');
+        if (typeof loaded.notifications !== 'boolean') throw new Error('notifications 必须是布尔');
+        config = loaded;
+        renderControls();
+        toast(`✓ 已加载 ${file.name}`);
+      } catch (err) {
+        toast(`⚠️ ${err.message}`, 'danger');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ============ 重置 ============
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    config = { ...DEFAULT_CONFIG };
+    renderControls();
+    toast('↺ 已重置为默认值');
+  });
+
+  // ============ 初始化 ============
+  renderControls();
+</script>
+</body>
+</html>
