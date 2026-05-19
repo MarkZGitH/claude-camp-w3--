@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字符串工具实验室</title>
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --text-1: #1d1d1f;
+    --text-2: #6e6e73;
+    --text-3: #86868b;
+    --accent: #0071e3;
+    --success: #00875a;
+    --success-bg: rgba(0, 135, 90, 0.08);
+    --danger: #c5221f;
+    --danger-bg: rgba(197, 34, 31, 0.06);
+    --vowel: #b25e09;
+    --vowel-bg: rgba(255, 149, 0, 0.18);
+    --border: rgba(0, 0, 0, 0.06);
+    --hairline: rgba(0, 0, 0, 0.08);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    --mono: "SF Mono", Menlo, Monaco, "Cascadia Mono", monospace;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 17px;
+    letter-spacing: -0.022em;
+    line-height: 1.47;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 64px 24px 96px; }
+
+  /* Hero */
+  .hero { text-align: center; margin-bottom: 40px; }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    margin-bottom: 12px;
+  }
+  .hero .subtitle { font-size: 19px; color: var(--text-2); letter-spacing: -0.01em; }
+  .hero code {
+    font-family: var(--mono);
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 15px;
+  }
+
+  /* Example chips */
+  .examples {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .chip {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 980px;
+    border: 1px solid rgba(0, 113, 227, 0.3);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    letter-spacing: -0.012em;
+    transition: all 0.18s ease;
+    font-family: var(--mono);
+  }
+  .chip:hover { background: rgba(0, 113, 227, 0.06); border-color: var(--accent); }
+  .chip:active { transform: scale(0.97); }
+
+  /* Input card */
+  .input-card {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    animation: fadeUp 0.5s ease backwards;
+  }
+  .input-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: vertical;
+    min-height: 60px;
+    font: inherit;
+    font-size: 19px;
+    color: var(--text-1);
+    background: transparent;
+    letter-spacing: -0.014em;
+    line-height: 1.5;
+  }
+  textarea::placeholder { color: var(--text-3); }
+
+  /* Result grid */
+  .results {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 800px) { .results { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    animation: fadeUp 0.5s ease backwards;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+  }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+
+  .card-fn {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: 0;
+  }
+  .card-title {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    margin-bottom: 16px;
+  }
+  .card-output {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .output-text {
+    font-family: var(--mono);
+    font-size: 17px;
+    color: var(--text-1);
+    word-break: break-word;
+    line-height: 1.5;
+    min-height: 1.5em;
+  }
+  .output-text.empty { color: var(--text-3); font-style: italic; }
+  .output-meta {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 12px;
+    font-family: var(--mono);
+    letter-spacing: 0;
+  }
+
+  /* Vowel card specific */
+  .vowel-number {
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-1);
+    margin-bottom: 8px;
+  }
+  .vowel-highlight {
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-2);
+    word-break: break-word;
+    margin-top: 8px;
+  }
+  .vowel-highlight .v {
+    background: var(--vowel-bg);
+    color: var(--vowel);
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  /* Palindrome card specific */
+  .palindrome-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.014em;
+    align-self: flex-start;
+    margin-bottom: 12px;
+  }
+  .palindrome-badge.yes { background: var(--success-bg); color: var(--success); }
+  .palindrome-badge.no { background: var(--danger-bg); color: var(--danger); }
+  .palindrome-detail {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-2);
+  }
+  .palindrome-detail .label {
+    display: inline-block;
+    color: var(--text-3);
+    min-width: 56px;
+  }
+  .palindrome-detail .value {
+    color: var(--text-1);
+    word-break: break-word;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 13px;
+    color: var(--text-3);
+    letter-spacing: -0.012em;
+  }
+  .footer code {
+    font-family: var(--mono);
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 80px; }
+    .input-card, .card { padding: 20px; }
+    textarea { font-size: 17px; }
+    .vowel-number { font-size: 52px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="hero">
+    <h1>字符串工具实验室</h1>
+    <p class="subtitle">实时演示 <code>string_utils.py</code> 的三个函数</p>
+  </header>
+
+  <div class="examples">
+    <button class="chip" data-text="hello world">hello world</button>
+    <button class="chip" data-text="racecar">racecar</button>
+    <button class="chip" data-text="A man, a plan, a canal: Panama">A man, a plan, a canal...</button>
+    <button class="chip" data-text="Programming is fun">Programming is fun</button>
+    <button class="chip" data-text="rhythm">rhythm</button>
+  </div>
+
+  <div class="input-card">
+    <div class="input-label">输入字符串</div>
+    <textarea id="input" rows="2" placeholder="在此输入任意字符串,下方三个函数会实时计算..."></textarea>
+  </div>
+
+  <div class="results">
+    <!-- 反转单词 -->
+    <div class="card">
+      <div class="card-fn">reverse_words()</div>
+      <div class="card-title">反转单词顺序</div>
+      <div class="card-output">
+        <div class="output-text" id="reverse-out"></div>
+        <div class="output-meta" id="reverse-meta"></div>
+      </div>
+    </div>
+
+    <!-- 元音数量 -->
+    <div class="card">
+      <div class="card-fn">count_vowels()</div>
+      <div class="card-title">元音字母数量</div>
+      <div class="card-output">
+        <div class="vowel-number" id="vowel-count">0</div>
+        <div class="output-meta">a / e / i / o / u(不区分大小写)</div>
+        <div class="vowel-highlight" id="vowel-highlight"></div>
+      </div>
+    </div>
+
+    <!-- 回文判断 -->
+    <div class="card">
+      <div class="card-fn">is_palindrome()</div>
+      <div class="card-title">是否回文</div>
+      <div class="card-output">
+        <span class="palindrome-badge yes" id="palindrome-badge">✓ 是回文</span>
+        <div class="palindrome-detail">
+          <div><span class="label">清理后:</span><span class="value" id="palindrome-cleaned"></span></div>
+          <div><span class="label">反向:</span><span class="value" id="palindrome-reversed"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    Week 3 · Project 3 · 三个函数的实现与 <code>string_utils.py</code> 完全一致
+  </footer>
+</div>
+
+<script>
+  // ============ 三个工具函数(与 string_utils.py 逻辑一致) ============
+  function reverseWords(s) {
+    return s.trim().split(/\s+/).filter(w => w).reverse().join(' ');
+  }
+
+  function countVowels(s) {
+    return (s.match(/[aeiou]/gi) || []).length;
+  }
+
+  function isPalindrome(s) {
+    const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return cleaned === cleaned.split('').reverse().join('');
+  }
+
+  // ============ 渲染结果 ============
+  const input = document.getElementById('input');
+  const reverseOut = document.getElementById('reverse-out');
+  const reverseMeta = document.getElementById('reverse-meta');
+  const vowelCount = document.getElementById('vowel-count');
+  const vowelHighlight = document.getElementById('vowel-highlight');
+  const palindromeBadge = document.getElementById('palindrome-badge');
+  const palindromeCleaned = document.getElementById('palindrome-cleaned');
+  const palindromeReversed = document.getElementById('palindrome-reversed');
+
+  function render() {
+    const s = input.value;
+
+    // reverse_words
+    if (s.trim() === '') {
+      reverseOut.textContent = '(等待输入...)';
+      reverseOut.classList.add('empty');
+      reverseMeta.textContent = '';
+    } else {
+      const reversed = reverseWords(s);
+      reverseOut.textContent = reversed;
+      reverseOut.classList.remove('empty');
+      const wordCount = s.trim().split(/\s+/).filter(w => w).length;
+      reverseMeta.textContent = `${wordCount} 个单词`;
+    }
+
+    // count_vowels
+    const count = countVowels(s);
+    vowelCount.textContent = count;
+    if (s === '') {
+      vowelHighlight.innerHTML = '';
+    } else {
+      // 高亮元音(用 span 标记)
+      const highlighted = [...s].map(c => {
+        if (/[aeiou]/i.test(c)) {
+          return `<span class="v">${c}</span>`;
+        }
+        return c.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }).join('');
+      vowelHighlight.innerHTML = highlighted;
+    }
+
+    // is_palindrome
+    const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const reversed = cleaned.split('').reverse().join('');
+    const isPal = cleaned === reversed;
+    if (isPal) {
+      palindromeBadge.className = 'palindrome-badge yes';
+      palindromeBadge.textContent = '✓ 是回文';
+    } else {
+      palindromeBadge.className = 'palindrome-badge no';
+      palindromeBadge.textContent = '✗ 不是回文';
+    }
+    palindromeCleaned.textContent = cleaned || '(空)';
+    palindromeReversed.textContent = reversed || '(空)';
+  }
+
+  // ============ 事件绑定 ============
+  input.addEventListener('input', render);
+
+  document.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.dataset.text;
+      input.focus();
+      render();
+    });
+  });
+
+  // ============ 初始化(用第一个示例) ============
+  input.value = 'A man, a plan, a canal: Panama';
+  render();
+</script>
+</body>
+</html>
