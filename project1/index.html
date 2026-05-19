@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学员对赌数据分析器</title>
+<style>
+  /* ============ 设计令牌(Design Tokens) ============ */
+  :root {
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --text-1: #1d1d1f;
+    --text-2: #6e6e73;
+    --text-3: #86868b;
+    --accent: #0071e3;
+    --accent-soft: rgba(0, 113, 227, 0.08);
+    --success: #00875a;
+    --success-bg: rgba(0, 135, 90, 0.06);
+    --warning: #b25e09;
+    --warning-bg: rgba(255, 149, 0, 0.08);
+    --danger: #c5221f;
+    --danger-bg: rgba(197, 34, 31, 0.06);
+    --border: rgba(0, 0, 0, 0.06);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.08);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    line-height: 1.47;
+    font-size: 17px;
+    letter-spacing: -0.022em;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 80px 24px 120px;
+  }
+
+  /* ============ Hero 区 ============ */
+  .hero { text-align: center; margin-bottom: 56px; }
+  .hero h1 {
+    font-size: clamp(36px, 5.5vw, 56px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.07;
+    margin-bottom: 16px;
+  }
+  .hero .subtitle {
+    font-size: 21px;
+    color: var(--text-2);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ============ 上传区 ============ */
+  .upload {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .upload-zone {
+    display: block;
+    border: 2px dashed rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .upload-zone.dragging { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.005); }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.7; }
+  .upload-text { font-size: 17px; margin-bottom: 4px; }
+  .upload-hint { font-size: 13px; color: var(--text-3); letter-spacing: -0.012em; }
+  .upload-status {
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: var(--accent-soft);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: -0.014em;
+  }
+  #file-input { display: none; }
+
+  /* ============ 三大指标卡 ============ */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: fadeUp 0.6s ease backwards;
+  }
+  .metric-card:nth-child(1) { animation-delay: 0.05s; }
+  .metric-card:nth-child(2) { animation-delay: 0.15s; }
+  .metric-card:nth-child(3) { animation-delay: 0.25s; }
+  .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .metric-label {
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 500;
+    letter-spacing: -0.014em;
+    margin-bottom: 12px;
+  }
+  .metric-value {
+    font-size: clamp(44px, 5.5vw, 60px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .metric-unit { font-size: 24px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
+  .metric-detail { font-size: 13px; color: var(--text-3); letter-spacing: -0.012em; }
+
+  /* ============ 区段卡片 ============ */
+  .section {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 36px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    animation: fadeUp 0.6s 0.35s ease backwards;
+  }
+  .section h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .section-subtitle { font-size: 15px; color: var(--text-2); margin-bottom: 28px; }
+
+  /* ============ 状态卡 ============ */
+  .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .status-card { padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+  .status-card.active { background: var(--warning-bg); border-color: rgba(255,149,0,0.18); }
+  .status-card.completed { background: var(--success-bg); border-color: rgba(0,135,90,0.18); }
+  .status-card.failed { background: var(--danger-bg); border-color: rgba(197,34,31,0.18); }
+  .status-indicator {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px;
+  }
+  .status-card.active .status-indicator { background: var(--warning); }
+  .status-card.completed .status-indicator { background: var(--success); }
+  .status-card.failed .status-indicator { background: var(--danger); }
+  .status-label {
+    display: flex; align-items: center;
+    font-size: 13px; font-weight: 500; color: var(--text-2);
+    margin-bottom: 10px; letter-spacing: -0.014em;
+  }
+  .status-count {
+    font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .status-card.active .status-count { color: var(--warning); }
+  .status-card.completed .status-count { color: var(--success); }
+  .status-card.failed .status-count { color: var(--danger); }
+  .status-meaning { font-size: 12px; color: var(--text-3); margin-top: 8px; letter-spacing: -0.01em; }
+
+  /* ============ 横向条形图 ============ */
+  .bar-list { display: flex; flex-direction: column; gap: 14px; }
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 36px; gap: 16px; align-items: center; }
+  .bar-label { font-size: 15px; font-weight: 500; color: var(--text-1); letter-spacing: -0.014em; }
+  .bar-track { height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #5ac8fa);
+    border-radius: 4px;
+    width: 0;
+    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .bar-value {
+    font-size: 15px; font-weight: 600; color: var(--text-1);
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ 页脚 ============ */
+  .footer { text-align: center; margin-top: 72px; font-size: 13px; color: var(--text-3); letter-spacing: -0.012em; }
+  .footer code {
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    background: rgba(0,0,0,0.04);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  /* ============ 入场动效 ============ */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 768px) {
+    .container { padding: 48px 16px 80px; }
+    .metrics, .status-grid { grid-template-columns: 1fr; }
+    .section { padding: 24px; }
+    .bar-row { grid-template-columns: 80px 1fr 32px; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="hero">
+    <h1>学员对赌数据分析器</h1>
+    <p class="subtitle">基于 CSV 数据的对赌完成率分析,一目了然。</p>
+  </header>
+
+  <section class="upload">
+    <label for="file-input" class="upload-zone" id="upload-zone">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">点击或拖拽 CSV 文件到此处</div>
+      <div class="upload-hint">需包含字段:name、email、joined_date、country、bet_status</div>
+    </label>
+    <input type="file" id="file-input" accept=".csv">
+    <div class="upload-status" id="upload-status">当前数据:示例数据(15 名学员)</div>
+  </section>
+
+  <section class="metrics">
+    <div class="metric-card">
+      <div class="metric-label">总人数</div>
+      <div class="metric-value"><span id="total-students">0</span></div>
+      <div class="metric-detail">已注册学员总数</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">总体完成率</div>
+      <div class="metric-value"><span id="overall-rate">0</span><span class="metric-unit">%</span></div>
+      <div class="metric-detail">含进行中学员(快照视角)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">已结算完成率</div>
+      <div class="metric-value"><span id="settled-rate">0</span><span class="metric-unit">%</span></div>
+      <div class="metric-detail">仅看已分胜负(真实效果)</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>对赌状态分布</h2>
+    <p class="section-subtitle">三种状态的学员人数</p>
+    <div class="status-grid">
+      <div class="status-card active">
+        <div class="status-label"><span class="status-indicator"></span>进行中</div>
+        <div class="status-count" id="active-count">0</div>
+        <div class="status-meaning">尚未到截止日期</div>
+      </div>
+      <div class="status-card completed">
+        <div class="status-label"><span class="status-indicator"></span>完成</div>
+        <div class="status-count" id="completed-count">0</div>
+        <div class="status-meaning">按时完成,可退费</div>
+      </div>
+      <div class="status-card failed">
+        <div class="status-label"><span class="status-indicator"></span>未完成</div>
+        <div class="status-count" id="failed-count">0</div>
+        <div class="status-meaning">未按时完成,不退费</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>各国家学员分布</h2>
+    <p class="section-subtitle">按学员人数从多到少排列</p>
+    <div class="bar-list" id="country-bars"></div>
+  </section>
+
+  <footer class="footer">
+    Week 3 · Project 1 · 数据来自 <code>students.csv</code> · 与 <code>analyzer.py</code> 计算逻辑一致
+  </footer>
+
+</div>
+
+<script>
+// ============ 内置示例数据(无需外部文件即可演示) ============
+const SAMPLE_CSV = `name,email,joined_date,country,bet_status
+Alice,alice@example.com,2026-05-01,Singapore,completed
+Bob,bob@example.com,2026-05-02,Australia,completed
+Charlie,charlie@example.com,2026-05-02,China,active
+David,david@example.com,2026-05-03,Australia,failed
+Emma,emma@example.com,2026-05-03,Singapore,completed
+Frank,frank@example.com,2026-05-04,China,completed
+Grace,grace@example.com,2026-05-04,Malaysia,active
+Henry,henry@example.com,2026-05-05,Australia,completed
+Ivy,ivy@example.com,2026-05-05,Singapore,failed
+Jack,jack@example.com,2026-05-06,UK,completed
+Kelly,kelly@example.com,2026-05-06,China,active
+Leo,leo@example.com,2026-05-07,Australia,completed
+Mia,mia@example.com,2026-05-07,Malaysia,completed
+Nick,nick@example.com,2026-05-08,Singapore,active
+Olivia,olivia@example.com,2026-05-08,Australia,completed`;
+
+// ============ CSV 解析(简单实现,匹配我们的数据格式) ============
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim());
+    const row = {};
+    headers.forEach((h, i) => row[h] = values[i]);
+    return row;
+  });
+}
+
+// ============ 统计逻辑(与 analyzer.py 完全一致) ============
+function analyze(rows) {
+  const total = rows.length;
+
+  const countryCounts = {};
+  rows.forEach(r => {
+    countryCounts[r.country] = (countryCounts[r.country] || 0) + 1;
+  });
+
+  const statusCounts = { active: 0, completed: 0, failed: 0 };
+  rows.forEach(r => {
+    if (statusCounts.hasOwnProperty(r.bet_status)) statusCounts[r.bet_status]++;
+  });
+
+  const overallRate = total > 0 ? (statusCounts.completed / total * 100) : 0;
+  const settled = statusCounts.completed + statusCounts.failed;
+  const settledRate = settled > 0 ? (statusCounts.completed / settled * 100) : 0;
+
+  return {
+    total,
+    countryCounts,
+    statusCounts,
+    overallRate: Math.round(overallRate * 100) / 100,
+    settledRate: Math.round(settledRate * 100) / 100,
+  };
+}
+
+// ============ 渲染到页面 ============
+function render(stats) {
+  document.getElementById('total-students').textContent = stats.total;
+  document.getElementById('overall-rate').textContent = stats.overallRate;
+  document.getElementById('settled-rate').textContent = stats.settledRate;
+
+  document.getElementById('active-count').textContent = stats.statusCounts.active;
+  document.getElementById('completed-count').textContent = stats.statusCounts.completed;
+  document.getElementById('failed-count').textContent = stats.statusCounts.failed;
+
+  const sortedCountries = Object.entries(stats.countryCounts).sort((a, b) => b[1] - a[1]);
+  const maxCount = sortedCountries[0]?.[1] || 1;
+
+  const container = document.getElementById('country-bars');
+  container.innerHTML = '';
+  sortedCountries.forEach(([country, count], i) => {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label">${country}</div>
+      <div class="bar-track"><div class="bar-fill"></div></div>
+      <div class="bar-value">${count}</div>
+    `;
+    container.appendChild(row);
+    // 错开延迟,让条带逐根展开
+    setTimeout(() => {
+      row.querySelector('.bar-fill').style.width = (count / maxCount * 100) + '%';
+    }, 150 + i * 80);
+  });
+}
+
+// ============ 文件上传处理 ============
+const fileInput = document.getElementById('file-input');
+const uploadZone = document.getElementById('upload-zone');
+const uploadStatus = document.getElementById('upload-status');
+
+function handleFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    uploadStatus.textContent = '⚠️ 请选择 CSV 格式的文件';
+    uploadStatus.style.color = 'var(--danger)';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (rows.length === 0) throw new Error('empty');
+      render(analyze(rows));
+      uploadStatus.textContent = `✓ 已加载:${file.name}(${rows.length} 名学员)`;
+      uploadStatus.style.color = 'var(--accent)';
+    } catch (err) {
+      uploadStatus.textContent = '⚠️ 文件解析失败,请检查 CSV 格式';
+      uploadStatus.style.color = 'var(--danger)';
+    }
+  };
+  reader.readAsText(file);
+}
+
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragging');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragging');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+// ============ 初始化:加载示例数据 ============
+render(analyze(parseCSV(SAMPLE_CSV)));
+</script>
+</body>
+</html>

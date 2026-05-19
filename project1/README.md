@@ -27,13 +27,20 @@ Week 3 学习作业 - 数据处理 + 文件 I/O 入门练习。
 | `analyzer.py` | 主程序,用 Pandas 处理数据 |
 | `students.csv` | 测试用假数据(15 行) |
 | `report.json` | 运行后生成的统计报告 |
+| `index.html` | 网页可视化界面(Apple 风格),支持上传 CSV |
 
 ## 运行方式
 
+### Python 分析器
 ```bash
 pip install pandas
 python analyzer.py
 ```
+
+### 网页可视化
+直接在浏览器打开 `index.html`(无需服务器),可:
+- 查看内置示例数据的分析结果
+- 拖拽自己的 CSV 文件上传,实时分析
 
 ## 输出示例
 
